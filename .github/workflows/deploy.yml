@@ -1,46 +1,48 @@
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: 'pages'
-  cancel-in-progress: true
-
+# 如果你用的是 GitHub Pages 官方 Action 部署（而非 peaceiris），参考这个配置
 jobs:
   deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write # 部署 Pages 必须的权限
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout code for deploy
+        uses: actions/checkout@v4 # 升级到 v4
         with:
           fetch-depth: 0
-      - name: Setup Node
-        uses: actions/setup-node@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4 # 升级到 v4
         with:
-          node-version: 18
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Build
-        run: npm run build
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+          name: build-files
+          path: ./front/dist
+
+      - name: Verify dist directory
+        run: |
+          ls -la ./front/dist
+          if [ ! -d "./front/dist" ]; then
+            echo "Error: dist directory not found!"
+            exit 1
+          fi
+
+      # 配置 GitHub Pages（升级到 v5）
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      # 上传 Pages 产物（升级到 v3）
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/.vitepress/dist
+          path: ./front/dist # 你的构建产物目录
+
+      # 部署 Pages（升级到 v4）
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
