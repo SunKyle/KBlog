@@ -4,18 +4,18 @@ name: Deploy VitePress to GitHub Pages
 # 触发条件：推送到 main/master 分支时执行
 on:
   push:
-    branches: [ main ] # 如果你用 master 分支，改成 master
+    branches: [main] # 如果你用 master 分支，改成 master
     # 仅当博客源码变更时触发（减少无用运行）
     paths:
-      - 'docs/**'          # VitePress 核心文档目录
-      - 'package.json'     # 依赖配置
+      - 'docs/**' # VitePress 核心文档目录
+      - 'package.json' # 依赖配置
       - '.github/workflows/**' # 工作流配置
 
 # 核心权限配置（必须）
 permissions:
-  contents: write        # 允许推送 gh-pages 分支
-  pages: write           # GitHub Pages 操作权限
-  id-token: write        # 身份验证权限
+  contents: write # 允许推送 gh-pages 分支
+  pages: write # GitHub Pages 操作权限
+  id-token: write # 身份验证权限
 
 # 部署任务
 jobs:
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 解决 Git 历史缺失问题
+          fetch-depth: 0 # 解决 Git 历史缺失问题
           # 可选：如果有主题子模块，需要拉取子模块
           # submodules: true
 
@@ -34,8 +34,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'  # VitePress 推荐的 LTS 版本
-          cache: 'npm'        # 缓存依赖，加速构建
+          node-version: '20' # VitePress 推荐的 LTS 版本
+          cache: 'npm' # 缓存依赖，加速构建
           cache-dependency-path: './package-lock.json' # 依赖锁文件路径
 
       # 步骤3：安装项目依赖（包括 VitePress）
@@ -44,17 +44,17 @@ jobs:
 
       # 步骤4：构建 VitePress 静态文件
       - name: Build VitePress site
-        run: npm run docs:build  # 对应 package.json 中的脚本
+        run: npm run build # 对应 package.json 中的脚本
 
       # 步骤5：部署到 gh-pages 分支
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}  # 自动生成，无需手动配置
-          publish_dir: ./docs/.vitepress/dist        # VitePress 构建产物目录（固定）
-          publish_branch: gh-pages                   # 部署到 gh-pages 分支
-          force_orphan: true                         # 清空历史，避免冲突
-          commit_message: "Deploy VitePress: ${{ github.sha }}" # 提交信息
+          github_token: ${{ secrets.GITHUB_TOKEN }} # 自动生成，无需手动配置
+          publish_dir: ./docs/.vitepress/dist # VitePress 构建产物目录（固定）
+          publish_branch: gh-pages # 部署到 gh-pages 分支
+          force_orphan: true # 清空历史，避免冲突
+          commit_message: 'Deploy VitePress: ${{ github.sha }}' # 提交信息
 
       # 步骤6：配置 GitHub Pages（可选，确保生效）
       - name: Configure GitHub Pages
