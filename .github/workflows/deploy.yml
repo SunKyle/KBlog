@@ -1,48 +1,65 @@
-# 如果你用的是 GitHub Pages 官方 Action 部署（而非 peaceiris），参考这个配置
+# VitePress 博客自动化部署到 GitHub Pages
+name: Deploy VitePress to GitHub Pages
+
+# 触发条件：推送到 main/master 分支时执行
+on:
+  push:
+    branches: [ main ] # 如果你用 master 分支，改成 master
+    # 仅当博客源码变更时触发（减少无用运行）
+    paths:
+      - 'docs/**'          # VitePress 核心文档目录
+      - 'package.json'     # 依赖配置
+      - '.github/workflows/**' # 工作流配置
+
+# 核心权限配置（必须）
+permissions:
+  contents: write        # 允许推送 gh-pages 分支
+  pages: write           # GitHub Pages 操作权限
+  id-token: write        # 身份验证权限
+
+# 部署任务
 jobs:
   deploy:
-    needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write # 部署 Pages 必须的权限
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-      - name: Checkout code for deploy
-        uses: actions/checkout@v4 # 升级到 v4
+      # 步骤1：拉取仓库源码（必须拉取全量历史）
+      - name: Checkout source code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # 解决 Git 历史缺失问题
+          # 可选：如果有主题子模块，需要拉取子模块
+          # submodules: true
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4 # 升级到 v4
+      # 步骤2：安装 Node.js（VitePress 依赖 Node）
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          name: build-files
-          path: ./front/dist
+          node-version: '20'  # VitePress 推荐的 LTS 版本
+          cache: 'npm'        # 缓存依赖，加速构建
+          cache-dependency-path: './package-lock.json' # 依赖锁文件路径
 
-      - name: Verify dist directory
-        run: |
-          ls -la ./front/dist
-          if [ ! -d "./front/dist" ]; then
-            echo "Error: dist directory not found!"
-            exit 1
-          fi
+      # 步骤3：安装项目依赖（包括 VitePress）
+      - name: Install dependencies
+        run: npm install
 
-      # 配置 GitHub Pages（升级到 v5）
+      # 步骤4：构建 VitePress 静态文件
+      - name: Build VitePress site
+        run: npm run docs:build  # 对应 package.json 中的脚本
+
+      # 步骤5：部署到 gh-pages 分支
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}  # 自动生成，无需手动配置
+          publish_dir: ./docs/.vitepress/dist        # VitePress 构建产物目录（固定）
+          publish_branch: gh-pages                   # 部署到 gh-pages 分支
+          force_orphan: true                         # 清空历史，避免冲突
+          commit_message: "Deploy VitePress: ${{ github.sha }}" # 提交信息
+
+      # 步骤6：配置 GitHub Pages（可选，确保生效）
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      # 上传 Pages 产物（升级到 v3）
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./front/dist # 你的构建产物目录
-
-      # 部署 Pages（升级到 v4）
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      # 步骤7：验证部署（可选）
+      - name: Verify deployment
+        run: echo "部署完成！访问地址：https://${{ github.actor }}.github.io/${{ github.event.repository.name }}/"
