@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.vuejs.org/config/app-configs
 export default defineConfig({
-  base: '/KBog/',
+  base: '/KBlog/',
   title: '个人博客',
   description: '我的技术博客',
   themeConfig: {
