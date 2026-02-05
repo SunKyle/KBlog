@@ -1,33 +1,139 @@
 import { defineConfig } from 'vitepress'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-// 同步版本的侧边栏配置
+// 获取当前文件目录
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const docsDir = path.join(__dirname, '..')
+
+// 完全自动生成侧边栏配置
 function generateSidebarSync() {
   const sidebar: any = {
-    '/articles/': [
-      {
-        text: '技术文章',
-        collapsible: true,
-        collapsed: false,
-        items: [
-          { text: 'Vue 3 入门', link: '/articles/vue/vue3-intro' },
-          { text: 'Vite 性能优化', link: '/articles/vue/vite-optimization' },
-          { text: 'Test Article', link: '/articles/vue/test-article' },
-          { text: 'Frontmatter 测试文章', link: '/articles/vue/frontmatter-test' }
-        ]
-      }
-    ],
-    '/life/': [
-      {
-        text: '生活随笔',
-        collapsible: true,
-        collapsed: false,
-        items: [
-          { text: '日常感悟', link: '/life/thoughts' },
-          { text: '旅行见闻', link: '/life/travel' }
-        ]
-      }
-    ],
+    '/articles/': [],
+    '/life/': [],
     '/about/': []
+  }
+
+  try {
+    // 处理技术文章
+    const articlesDir = path.join(docsDir, 'articles')
+    if (fs.existsSync(articlesDir)) {
+      // 遍历文章分类目录
+      const categories = fs.readdirSync(articlesDir, { withFileTypes: true })
+        .filter((dirent: any) => dirent.isDirectory())
+        .map((dirent: any) => dirent.name)
+      
+      categories.forEach((category: string) => {
+        const categoryDir = path.join(articlesDir, category)
+        const files = fs.readdirSync(categoryDir)
+          .filter((file: string) => file.endsWith('.md') && file !== 'index.md')
+        
+        if (files.length > 0) {
+          // 为每个分类创建二级导航
+          const categoryNav = {
+            text: category.charAt(0).toUpperCase() + category.slice(1), // 首字母大写
+            collapsible: true,
+            collapsed: false,
+            items: [] as any[]
+          }
+          
+          files.forEach((file: string) => {
+            const fileName = file.replace('.md', '')
+            const filePath = path.join(categoryDir, file)
+            
+            // 尝试从文件内容中提取标题
+            let title = fileName
+            try {
+              const content = fs.readFileSync(filePath, 'utf8')
+              
+              // 尝试从 frontmatter 中提取标题
+              const frontmatterMatch = content.match(/^---[\s\S]*?title:\s*(.+?)[\s\S]*?---/)
+              if (frontmatterMatch && frontmatterMatch[1]) {
+                title = frontmatterMatch[1].trim()
+              } else {
+                // 尝试从第一个 h1 标题中提取
+                const h1Match = content.match(/^#\s+(.+)$/m)
+                if (h1Match && h1Match[1]) {
+                  title = h1Match[1].trim()
+                }
+              }
+            } catch (error) {
+              // 如果出错，使用文件名作为标题
+              title = fileName.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase())
+            }
+            
+            categoryNav.items.push({
+              text: title,
+              link: `/articles/${category}/${fileName}`
+            })
+          })
+          
+          sidebar['/articles/'].push(categoryNav)
+        }
+      })
+    }
+    
+    // 处理生活随笔
+    const lifeDir = path.join(docsDir, 'life')
+    if (fs.existsSync(lifeDir)) {
+      // 遍历生活随笔分类目录
+      const categories = fs.readdirSync(lifeDir, { withFileTypes: true })
+        .filter((dirent: any) => dirent.isDirectory())
+        .map((dirent: any) => dirent.name)
+      
+      categories.forEach((category: string) => {
+        const categoryDir = path.join(lifeDir, category)
+        const files = fs.readdirSync(categoryDir)
+          .filter((file: string) => file.endsWith('.md') && file !== 'index.md')
+        
+        if (files.length > 0) {
+          // 为每个分类创建二级导航
+          const categoryNav = {
+            text: category, // 使用目录名作为分类名称
+            collapsible: true,
+            collapsed: true,
+            items: [] as any[]
+          }
+          
+          files.forEach((file: string) => {
+            const fileName = file.replace('.md', '')
+            const filePath = path.join(categoryDir, file)
+            
+            // 尝试从文件内容中提取标题
+            let title = fileName
+            try {
+              const content = fs.readFileSync(filePath, 'utf8')
+              
+              // 尝试从 frontmatter 中提取标题
+              const frontmatterMatch = content.match(/^---[\s\S]*?title:\s*(.+?)[\s\S]*?---/)
+              if (frontmatterMatch && frontmatterMatch[1]) {
+                title = frontmatterMatch[1].trim()
+              } else {
+                // 尝试从第一个 h1 标题中提取
+                const h1Match = content.match(/^#\s+(.+)$/m)
+                if (h1Match && h1Match[1]) {
+                  title = h1Match[1].trim()
+                }
+              }
+            } catch (error) {
+              // 如果出错，使用文件名作为标题
+              title = fileName.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase())
+            }
+            
+            categoryNav.items.push({
+              text: title,
+              link: `/life/${encodeURIComponent(category)}/${fileName}`
+            })
+          })
+          
+          sidebar['/life/'].push(categoryNav)
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Error generating sidebar:', error)
   }
 
   return sidebar
