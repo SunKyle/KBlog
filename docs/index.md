@@ -12,5 +12,5 @@
 
 ## 最新文章
 
-- [Vue 3 入门](/articles/vue3-intro)
-- [Vite 性能优化](/articles/vite-optimization)
+- [Vue 3 入门](/articles/vue/vue3-intro)
+- [Vite 性能优化](/articles/vue/vite-optimization)
